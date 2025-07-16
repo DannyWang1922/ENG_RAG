@@ -1,0 +1,13 @@
+# Vector database
+chroma_db/
+
+# Course materials
+ELC1012/
+
+# Python
+__pycache__/
+
+# macOS
+.DS_Store
+
+
