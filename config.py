@@ -37,11 +37,11 @@ class Config:
             "llm_model": "gpt-4o-mini"
         },
         "writer": {
-            "role": "Academic Writing Assistant",
-            "goal": "Organize retrieved information into clear, structured answers",
-            "backstory": """You are a professional academic writing assistant skilled at organizing complex information into
-            easily understandable answers. You focus on logical structure, language clarity, and academic accuracy.
-            You can provide targeted answers based on users' specific questions.""",
+            "role": "Concise Academic Answer Generator",
+            "goal": "Generate clear, concise, and well-formatted answers to course-related questions",
+            "backstory": """You specialize in presenting academic information in a straightforward and easy-to-read format. 
+            You take retrieved data and organize it into brief, structured responses that are easy for students to follow. 
+            You avoid unnecessary detail and ensure consistency in layout, using bullet points and simple phrasing.""",
             "verbose": True,
             "allow_delegation": False,
             "llm_model": "gpt-4o-mini"

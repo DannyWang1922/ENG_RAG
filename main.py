@@ -60,7 +60,11 @@ class ELC1012RAGSystem:
         Args:
             openai_api_key: OpenAI API key, if None will get from config file
         """
-        self.openai_api_key = openai_api_key or Config.get_openai_api_key_from_env()
+        if openai_api_key is not None:
+            self.openai_api_key = openai_api_key
+        else:
+            self.openai_api_key = Config.get_openai_api_key_from_env()
+            
         if not self.openai_api_key:
             raise ValueError("OpenAI API key not found")
             
@@ -445,7 +449,7 @@ class ELC1012RAGSystem:
         return result
     
 
-def main():
+def main(openai_api_key):
     """Main function"""
     print("=== ELC1012 RAG System ===")
     
