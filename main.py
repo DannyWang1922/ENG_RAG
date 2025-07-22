@@ -3,6 +3,11 @@ import glob
 import logging
 from typing import List
 from pathlib import Path
+import fitz  # PyMuPDF
+import pytesseract
+from PIL import Image
+import io
+import numpy as np
 
 from crewai import Agent, Task, Crew, Process
 from crewai.tools import BaseTool
@@ -20,6 +25,107 @@ os.environ["CHROMA_TELEMETRY_ENABLED"] = "False"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main.py')
+
+class OCRPDFLoader:
+    """PDF loader with OCR support using PyMuPDF and pytesseract"""
+    
+    def __init__(self, file_path: str, tesseract_cmd: str = None, ocr_config: dict = None):
+        """
+        Initialize OCR PDF loader
+        
+        Args:
+            file_path: Path to PDF file
+            tesseract_cmd: Path to tesseract executable (optional)
+            ocr_config: OCR configuration dictionary
+        """
+        self.file_path = file_path
+        self.ocr_config = ocr_config or Config.OCR_CONFIG
+        
+        # Set tesseract command
+        if tesseract_cmd:
+            pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+        elif self.ocr_config.get("tesseract_cmd"):
+            pytesseract.pytesseract.tesseract_cmd = self.ocr_config["tesseract_cmd"]
+    
+    def load(self) -> List[Document]:
+        """
+        Load PDF with OCR support
+        
+        Returns:
+            List[Document]: List of documents with text content
+        """
+        documents = []
+        
+        try:
+            # Open PDF with PyMuPDF
+            pdf_document = fitz.open(self.file_path)
+            
+            for page_num in range(len(pdf_document)):
+                page = pdf_document[page_num]
+                
+                # Extract text from page
+                text_content = page.get_text()
+                
+                # Extract images from page and perform OCR
+                image_list = page.get_images()
+                ocr_text = ""
+                
+                if self.ocr_config.get("enable_ocr", True):
+                    for img_index, img in enumerate(image_list):
+                        try:
+                            # Get image data
+                            xref = img[0]
+                            pix = fitz.Pixmap(pdf_document, xref)
+                            
+                            # Check image size
+                            min_size = self.ocr_config.get("min_image_size", 100)
+                            if pix.width < min_size or pix.height < min_size:
+                                pix = None
+                                continue
+                            
+                            # Convert to PIL Image
+                            img_data = pix.tobytes("png")
+                            pil_image = Image.open(io.BytesIO(img_data))
+                            
+                            # Perform OCR on the image
+                            lang = self.ocr_config.get("ocr_language", "eng")
+                            img_text = pytesseract.image_to_string(pil_image, lang=lang)
+                            
+                            if img_text.strip():
+                                ocr_text += f"\n[Image {img_index + 1} OCR Text]: {img_text.strip()}\n"
+                            
+                            # Clean up
+                            pix = None
+                            
+                        except Exception as e:
+                            logger.warning(f"Failed to process image {img_index} on page {page_num + 1}: {str(e)}")
+                            continue
+                
+                # Combine regular text and OCR text
+                full_text = text_content
+                if ocr_text.strip():
+                    full_text += "\n" + ocr_text
+                
+                # Create document
+                if full_text.strip():
+                    doc = Document(
+                        page_content=full_text,
+                        metadata={
+                            "source": self.file_path,
+                            "filename": os.path.basename(self.file_path),
+                            "page": page_num + 1,
+                            "total_pages": len(pdf_document)
+                        }
+                    )
+                    documents.append(doc)
+            
+            pdf_document.close()
+            
+        except Exception as e:
+            logger.error(f"Failed to load PDF {self.file_path}: {str(e)}")
+            raise
+        
+        return documents
 
 class RAGTool(BaseTool):
     """Custom RAG Tool"""
@@ -283,17 +389,13 @@ class ELC1012RAGSystem:
             
         for file in all_files:
             try:
-                loader = PyPDFLoader(file)
+                # Use OCR-enabled PDF loader
+                loader = OCRPDFLoader(file, ocr_config=Config.OCR_CONFIG)
                 docs = loader.load()
                 
-                # Add metadata for each document
-                for doc in docs:
-                    doc.metadata["source"] = file
-                    doc.metadata["filename"] = os.path.basename(file)
-                    
                 documents.extend(docs)
                 logger.info(f"Successfully loaded: {file} ({len(docs)} pages)")
-                logger.info(f"Successfully loaded {file} with {len(docs)} pages")
+                logger.info(f"Successfully loaded {file} with {len(docs)} pages (including OCR text)")
                 
             except Exception as e:
                 logger.info(f"Failed to load {file}: {str(e)}")

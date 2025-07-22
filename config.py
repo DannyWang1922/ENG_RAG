@@ -16,6 +16,14 @@ class Config:
         "supported_formats": [".pdf"]
     }
     
+    # OCR configuration
+    OCR_CONFIG = {
+        "tesseract_cmd": None,  # Path to tesseract executable, None for auto-detect
+        "ocr_language": "eng",  # Language for OCR
+        "enable_ocr": True,     # Enable OCR for images in PDFs
+        "min_image_size": 100   # Minimum image size to process (pixels)
+    }
+    
     # Vector database configuration
     VECTOR_DB_CONFIG = {
         "persist_directory": "./chroma_db",
@@ -129,8 +137,8 @@ class Config:
         """Get all configurations"""
         return {
             "document_config": cls.DOCUMENT_CONFIG,
+            "ocr_config": cls.OCR_CONFIG,
             "vector_db_config": cls.VECTOR_DB_CONFIG,
-            "llm_config": cls.LLM_CONFIG,
             "agent_config": cls.AGENT_CONFIG,
             "task_config": cls.TASK_CONFIG,
             "rag_tool_config": cls.RAG_TOOL_CONFIG,
