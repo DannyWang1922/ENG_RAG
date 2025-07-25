@@ -214,7 +214,7 @@ class ELC1012RAGSystem:
                     logger.info("Failed to load existing database, will create new one...")
         
         # If no existing database or failed to load, create new one
-        logger.info("Loading ELC1012 course materials...")
+        logger.info("No existing database detected, loading ELC1012 course materials...")
         documents = self.load_documents()
         
         if not documents:
@@ -395,7 +395,6 @@ class ELC1012RAGSystem:
                 
                 documents.extend(docs)
                 logger.info(f"Successfully loaded: {file} ({len(docs)} pages)")
-                logger.info(f"Successfully loaded {file} with {len(docs)} pages (including OCR text)")
                 
             except Exception as e:
                 logger.info(f"Failed to load {file}: {str(e)}")
